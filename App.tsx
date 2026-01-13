@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -57,7 +56,10 @@ const App: React.FC = () => {
 
   const renderView = () => {
     if (isLoading) {
-        return <div className="flex items-center justify-center h-full text-slate-500 font-black uppercase tracking-widest animate-pulse">Initializing Database...</div>;
+        return <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-4 animate-pulse">
+          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          <span className="font-black uppercase tracking-widest text-xs">Accessing Offline Storage...</span>
+        </div>;
     }
 
     switch (currentView) {
@@ -83,10 +85,10 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row">
       <Sidebar currentView={currentView} onChangeView={setCurrentView} />
       
-      <main className="flex-1 md:ml-64 p-4 md:p-8 h-screen overflow-y-auto print:ml-0 print:p-0">
+      <main className="flex-1 lg:ml-64 p-4 md:p-6 lg:p-8 h-[calc(100vh-64px)] lg:h-screen overflow-y-auto no-print print:ml-0 print:p-0">
         <div className="max-w-7xl mx-auto h-full">
           {renderView()}
         </div>

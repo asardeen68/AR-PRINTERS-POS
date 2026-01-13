@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Minus, Printer, CheckCircle, ShoppingCart, CreditCard, Download, X, MessageCircle, Share2, Store, Keyboard, Tag, Layers, User, Banknote, Trash2, Globe, Mail, Phone } from 'lucide-react';
 import { Product, CartItem, Sale, ShopProfile } from '../types';
@@ -27,7 +26,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
   const [isSharing, setIsSharing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Manual entry states for items not in inventory
+  // Manual entry states
   const [manualName, setManualName] = useState('');
   const [manualPrice, setManualPrice] = useState('');
   const [manualQty, setManualQty] = useState('1');
@@ -72,7 +71,8 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
     setManualName('');
     setManualPrice('');
     setManualQty('1');
-    document.getElementById('manual-item-name')?.focus();
+    const input = document.getElementById('manual-item-name');
+    if (input) input.focus();
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -162,7 +162,11 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
       html2canvas: { scale: 3, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    html2pdf().set(opt).from(element).save();
+    if (typeof html2pdf !== 'undefined') {
+      html2pdf().set(opt).from(element).save();
+    } else {
+      alert("PDF generator not loaded. Please ensure you have an internet connection to load the PDF library initially.");
+    }
   };
 
   const handleSharePdf = async () => {
@@ -177,6 +181,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     try {
+      if (typeof html2pdf === 'undefined') throw new Error("Library not loaded");
       const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
       const file = new File([pdfBlob], `AR_Printers_Inv_${lastInvoice.id.slice(-6)}.pdf`, { type: 'application/pdf' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -186,10 +191,11 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
             text: `Receipt for ${lastInvoice.customerName} from AR Printers.`
         });
       } else {
-        alert("Sharing not supported on this device/browser. Please download and send manually.");
+        alert("Web Share API not supported on this device. Use the download button instead.");
       }
     } catch (e) { 
         console.error(e); 
+        alert("Could not share PDF. Please download it first.");
     } finally { 
         setIsSharing(false); 
     }
@@ -199,11 +205,11 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
     <div className="h-full flex flex-col lg:flex-row gap-4 overflow-hidden">
       
       {/* LEFT: ENTRY & SELECTION */}
-      <div className="flex-1 flex flex-col space-y-4 no-print overflow-hidden">
+      <div className="w-full lg:w-[55%] flex flex-col space-y-4 no-print overflow-hidden">
         {/* Quick Entry Form */}
         <div className="bg-white p-4 lg:p-5 rounded-2xl shadow-sm border border-slate-200">
           <h3 className="text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-            <Keyboard size={14} /> Quick Billing (Direct)
+            <Keyboard size={14} /> Direct Item Entry
           </h3>
           <div className="grid grid-cols-12 gap-2">
             <div className="col-span-12 md:col-span-5">
@@ -232,16 +238,16 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
+          <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 content-start">
             {filteredProducts.map(p => (
               <button key={p.id} onClick={() => addToCart(p)} className="p-4 bg-white border-2 border-slate-50 rounded-2xl text-left hover:border-cyan-500 transition-all group flex flex-col justify-between h-32 relative overflow-hidden">
                 <div className="absolute -right-2 -top-2 opacity-5 group-hover:opacity-10"><Tag size={48} /></div>
                 <div>
                   <span className="text-[8px] font-black bg-slate-900 text-white px-2 py-0.5 rounded uppercase tracking-tighter">{p.category}</span>
-                  <h4 className="font-bold text-slate-800 mt-2 text-xs leading-tight uppercase line-clamp-2">{p.name}</h4>
+                  <h4 className="font-bold text-slate-800 mt-2 text-[11px] leading-tight uppercase line-clamp-2">{p.name}</h4>
                 </div>
                 <div className="flex justify-between items-end">
-                  <span className="text-sm font-black text-slate-900">Rs. {p.price.toFixed(2)}</span>
+                  <span className="text-sm font-black text-slate-900">Rs.{p.price.toFixed(0)}</span>
                   <div className="p-1 bg-slate-100 rounded-lg group-hover:bg-cyan-600 group-hover:text-white transition-colors"><Plus size={14} /></div>
                 </div>
               </button>
@@ -251,21 +257,21 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
       </div>
 
       {/* RIGHT: BILL SUMMARY */}
-      <div className="flex-1 flex flex-col space-y-4 no-print overflow-hidden">
+      <div className="w-full lg:w-[45%] flex flex-col space-y-4 no-print overflow-hidden">
         <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
           <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <h2 className="text-lg font-black text-slate-800 flex items-center gap-3"><ShoppingCart size={20} className="text-cyan-600"/> Current Bill</h2>
             <button onClick={() => setCart([])} className="text-xs text-red-500 font-bold hover:underline flex items-center gap-1"><Trash2 size={14}/> Clear</button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {cart.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center opacity-20"><ShoppingCart size={60} /><p className="font-bold mt-2 uppercase tracking-widest text-sm">Cart is Empty</p></div>
             ) : (
               cart.map(item => (
-                <div key={item.id} className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl group relative border border-transparent hover:border-slate-200 transition-all">
+                <div key={item.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl group relative border border-transparent hover:border-slate-200 transition-all">
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-xs text-slate-900 uppercase leading-none truncate">{item.name}</h4>
+                    <h4 className="font-bold text-[11px] text-slate-900 uppercase leading-none truncate">{item.name}</h4>
                     <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Rs. {item.price.toFixed(2)}</p>
                   </div>
                   
@@ -273,7 +279,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
                     <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:text-red-500"><Minus size={14} /></button>
                     <input 
                         type="number"
-                        className="w-10 text-center font-black text-xs bg-transparent outline-none border-none"
+                        className="w-10 text-center font-black text-xs bg-transparent outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         value={item.quantity}
                         onChange={(e) => setManualQuantity(item.id, e.target.value)}
                     />
@@ -281,7 +287,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
                   </div>
 
                   <div className="text-right min-w-[70px]">
-                    <p className="font-black text-slate-900 text-xs">Rs. {(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="font-black text-slate-900 text-xs">Rs.{(item.price * item.quantity).toFixed(0)}</p>
                   </div>
 
                   <button onClick={() => removeFromCart(item.id)} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"><X size={16} /></button>
@@ -290,53 +296,53 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
             )}
           </div>
           
-          <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-3">
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Customer Name</label>
-                <input type="text" className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Walk-in" />
+                <label className="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Customer Name</label>
+                <input type="text" className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-cyan-500 outline-none" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Walk-in" />
               </div>
               <div>
-                <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Contact Phone</label>
-                <input type="text" className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold" value={customerContact} onChange={(e) => setCustomerContact(e.target.value)} placeholder="07XXXXXXXX" />
+                <label className="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Contact Phone</label>
+                <input type="text" className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:border-cyan-500 outline-none" value={customerContact} onChange={(e) => setCustomerContact(e.target.value)} placeholder="07XXXXXXXX" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Totals & Finish */}
-        <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-xl space-y-4">
+        <div className="bg-slate-900 rounded-2xl p-5 lg:p-6 text-white shadow-xl space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Discount (Rs.)</label>
-              <input type="number" className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 rounded-xl text-amber-400 font-black text-lg outline-none" value={discountAmount} onChange={(e) => setDiscountAmount(Number(e.target.value))} />
+              <input type="number" className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 rounded-xl text-amber-400 font-black text-lg outline-none focus:border-amber-500" value={discountAmount} onChange={(e) => setDiscountAmount(Number(e.target.value))} />
             </div>
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cash Given (Rs.)</label>
-              <input type="number" className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 rounded-xl text-green-400 font-black text-lg outline-none" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} placeholder="0.00" />
+              <input type="number" className="w-full px-4 py-3 bg-slate-800 border-2 border-slate-700 rounded-xl text-green-400 font-black text-lg outline-none focus:border-green-500" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} placeholder="0.00" />
             </div>
           </div>
 
           <div className="flex justify-between items-center py-2 border-t border-slate-800">
             <div>
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Net Total</span>
-              <span className="text-4xl font-black text-white font-mono">Rs. {total.toFixed(2)}</span>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Net Payable</span>
+              <span className="text-4xl font-black text-white font-mono">Rs.{total.toFixed(0)}</span>
             </div>
             <div className="text-right">
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Balance</span>
-              <span className={`text-2xl font-black font-mono ${change >= 0 ? 'text-cyan-400' : 'text-red-500'}`}>Rs. {change.toFixed(2)}</span>
+              <span className={`text-2xl font-black font-mono ${change >= 0 ? 'text-cyan-400' : 'text-red-500'}`}>Rs.{change.toFixed(0)}</span>
             </div>
           </div>
 
           <div className="space-y-3">
              <div className="grid grid-cols-4 gap-2">
                {(['Cash', 'Card', 'Online', 'Credit'] as const).map(m => (
-                 <button key={m} onClick={() => setPaymentMethod(m)} className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase transition-all ${paymentMethod === m ? (m === 'Credit' ? 'bg-red-600 border-red-400 text-white' : 'bg-cyan-600 border-cyan-400 text-white') : 'bg-slate-800 border-slate-700 text-slate-500'}`}>{m}</button>
+                 <button key={m} onClick={() => setPaymentMethod(m)} className={`py-3 rounded-xl border-2 font-black text-[10px] uppercase transition-all ${paymentMethod === m ? (m === 'Credit' ? 'bg-red-600 border-red-400 text-white shadow-lg' : 'bg-cyan-600 border-cyan-400 text-white shadow-lg') : 'bg-slate-800 border-slate-700 text-slate-500'}`}>{m}</button>
                ))}
              </div>
              
-             <button onClick={handleCheckout} disabled={cart.length === 0 || isProcessing} className={`w-full py-5 rounded-2xl font-black uppercase text-xl flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 ${paymentMethod === 'Credit' ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'}`}>
-                {isProcessing ? <div className="animate-spin h-6 w-6 border-4 border-white border-t-transparent rounded-full"/> : <><CheckCircle size={28} /> {paymentMethod === 'Credit' ? 'Record Credit' : 'Finish Bill'}</>}
+             <button onClick={handleCheckout} disabled={cart.length === 0 || isProcessing} className={`w-full py-5 rounded-2xl font-black uppercase text-xl flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 ${paymentMethod === 'Credit' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' : 'bg-green-600 hover:bg-green-500 shadow-green-500/20'}`}>
+                {isProcessing ? <div className="animate-spin h-6 w-6 border-4 border-white border-t-transparent rounded-full"/> : <><CheckCircle size={28} /> {paymentMethod === 'Credit' ? 'Record Credit' : 'Complete Bill'}</>}
              </button>
           </div>
         </div>
@@ -344,83 +350,83 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
 
       {/* INVOICE MODAL */}
       {showPreview && lastInvoice && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl max-h-[95vh] overflow-hidden flex flex-col w-full max-w-4xl">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 no-print">
-              <div>
+        <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-2 lg:p-4 overflow-y-auto">
+          <div className="bg-white rounded-[2rem] lg:rounded-[2.5rem] shadow-2xl max-h-screen lg:max-h-[95vh] flex flex-col w-full max-w-5xl">
+            <div className="p-4 lg:p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-center bg-slate-50 no-print gap-4">
+              <div className="text-center sm:text-left">
                 <h2 className="text-xl font-black text-slate-900 uppercase">Billing Successful</h2>
-                <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Serial #{lastInvoice.id.slice(-6)}</p>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Serial #{lastInvoice.id.slice(-6)}</p>
               </div>
-              <div className="flex gap-3">
-                <button onClick={handlePrint} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest"><Printer size={16} /> Print</button>
-                <button onClick={handleSharePdf} disabled={isSharing} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest"><Share2 size={16} /> {isSharing ? 'Sharing...' : 'Share'}</button>
-                <button onClick={handleDownloadPdf} className="flex items-center gap-2 px-5 py-2.5 bg-cyan-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest"><Download size={16} /> PDF</button>
-                <button onClick={handleClosePreview} className="ml-2 p-2.5 text-slate-400 hover:bg-slate-200 rounded-full"><X size={24} /></button>
+              <div className="flex flex-wrap justify-center gap-2 lg:gap-3">
+                <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-md hover:bg-black transition-all"><Printer size={16} /> Print</button>
+                <button onClick={handleSharePdf} disabled={isSharing} className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-md hover:bg-indigo-700 transition-all"><Share2 size={16} /> {isSharing ? 'Sharing...' : 'Share'}</button>
+                <button onClick={handleDownloadPdf} className="flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-md hover:bg-cyan-700 transition-all"><Download size={16} /> PDF</button>
+                <button onClick={handleClosePreview} className="ml-2 p-2.5 text-slate-400 hover:bg-slate-200 rounded-full transition-all"><X size={24} /></button>
               </div>
             </div>
             
-            <div className="overflow-y-auto p-10 bg-slate-100 flex justify-center">
-              <div id="invoice-preview" className="bg-white p-12 w-[210mm] min-h-[297mm] flex flex-col shadow-2xl border border-slate-200">
+            <div className="flex-1 overflow-y-auto p-4 lg:p-10 bg-slate-100 flex justify-center">
+              <div id="invoice-preview" className="bg-white p-6 lg:p-12 w-full lg:w-[210mm] min-h-[297mm] flex flex-col shadow-2xl border border-slate-200">
                 
                 {/* Header Section */}
-                <div className="flex justify-between items-start border-b-8 border-slate-900 pb-10 mb-10">
-                    <div className="flex gap-8 items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start border-b-8 border-slate-900 pb-8 mb-8 gap-6">
+                    <div className="flex flex-col sm:flex-row gap-6 items-center text-center sm:text-left">
                         {shopProfile.logo ? (
-                            <img src={shopProfile.logo} alt="AR Printers Logo" className="w-32 h-32 object-contain" />
+                            <img src={shopProfile.logo} alt="Shop Logo" className="w-24 h-24 lg:w-32 lg:h-32 object-contain" />
                         ) : (
-                            <div className="bg-slate-900 text-white p-6 rounded-3xl"><Store size={48} /></div>
+                            <div className="bg-slate-900 text-white p-6 rounded-3xl"><Store size={40} /></div>
                         )}
                         <div>
-                            <h1 className="text-5xl font-black tracking-tighter uppercase leading-none">{shopProfile.name}</h1>
-                            <p className="text-xs font-bold text-slate-400 tracking-[0.4em] uppercase mt-2 italic">Premium Printing Solutions</p>
-                            <div className="mt-4 space-y-1 text-slate-600 font-bold text-[10px] uppercase">
-                                <p className="flex items-center gap-2"><Phone size={10} className="text-cyan-600" /> {shopProfile.phone}</p>
-                                <p className="flex items-center gap-2"><Mail size={10} className="text-cyan-600" /> {shopProfile.email}</p>
-                                {shopProfile.website && <p className="flex items-center gap-2"><Globe size={10} className="text-cyan-600" /> {shopProfile.website}</p>}
+                            <h1 className="text-3xl lg:text-5xl font-black tracking-tighter uppercase leading-none">{shopProfile.name}</h1>
+                            <p className="text-[10px] lg:text-xs font-bold text-slate-400 tracking-[0.4em] uppercase mt-2 italic">Official Printing & Solutions Hub</p>
+                            <div className="mt-4 space-y-1 text-slate-600 font-bold text-[9px] lg:text-[10px] uppercase">
+                                <p className="flex items-center justify-center sm:justify-start gap-2"><Phone size={10} className="text-cyan-600" /> {shopProfile.phone}</p>
+                                <p className="flex items-center justify-center sm:justify-start gap-2"><Mail size={10} className="text-cyan-600" /> {shopProfile.email}</p>
+                                {shopProfile.website && <p className="flex items-center justify-center sm:justify-start gap-2"><Globe size={10} className="text-cyan-600" /> {shopProfile.website}</p>}
                             </div>
                         </div>
                     </div>
-                    <div className="text-right">
-                        <h2 className="text-4xl font-black text-slate-100 uppercase tracking-widest mb-2 select-none">Receipt</h2>
+                    <div className="text-center sm:text-right">
+                        <h2 className="text-3xl lg:text-4xl font-black text-slate-100 uppercase tracking-widest mb-2 select-none">Receipt</h2>
                         <div className="space-y-1">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Billing ID</p>
-                            <p className="font-mono text-2xl font-black text-slate-900">#{lastInvoice.id.slice(-6)}</p>
-                            <p className="text-sm font-black text-slate-500 uppercase">{new Date(lastInvoice.date).toLocaleDateString()}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Serial ID</p>
+                            <p className="font-mono text-xl lg:text-2xl font-black text-slate-900">#{lastInvoice.id.slice(-6)}</p>
+                            <p className="text-xs lg:text-sm font-black text-slate-500 uppercase">{new Date(lastInvoice.date).toLocaleDateString()}</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Client Info */}
-                <div className="grid grid-cols-2 gap-16 mb-12">
-                    <div className="bg-slate-50 p-6 rounded-3xl border-l-8 border-cyan-500">
-                        <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Customer Details</h3>
-                        <p className="font-black text-3xl text-slate-900 uppercase leading-tight">{lastInvoice.customerName}</p>
-                        <p className="text-base font-bold text-slate-500 mt-1">{lastInvoice.customerContact || 'No Contact Specified'}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-10">
+                    <div className="bg-slate-50 p-5 rounded-3xl border-l-8 border-cyan-500">
+                        <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Billed To</h3>
+                        <p className="font-black text-2xl lg:text-3xl text-slate-900 uppercase leading-tight">{lastInvoice.customerName}</p>
+                        <p className="text-sm lg:text-base font-bold text-slate-500 mt-1">{lastInvoice.customerContact || 'Direct Customer'}</p>
                     </div>
-                    <div className="text-right p-6">
-                        <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Service Location</h3>
-                        <p className="font-black text-slate-800 text-xs whitespace-pre-line leading-relaxed uppercase">{shopProfile.address}</p>
+                    <div className="text-center sm:text-right p-2 sm:p-5">
+                        <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Business Address</h3>
+                        <p className="font-black text-slate-800 text-[10px] lg:text-xs whitespace-pre-line leading-relaxed uppercase">{shopProfile.address}</p>
                     </div>
                 </div>
 
                 {/* Items Table */}
-                <div className="flex-1">
+                <div className="flex-1 overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="border-b-4 border-slate-900 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-                                <th className="py-4 pl-4">Item Description</th>
-                                <th className="py-4 text-center w-24">Qty</th>
-                                <th className="py-4 text-right w-40">Unit Price</th>
-                                <th className="py-4 text-right w-44 pr-4">Total</th>
+                            <tr className="border-b-4 border-slate-900 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+                                <th className="py-4 pl-4">Item Details</th>
+                                <th className="py-4 text-center w-20 lg:w-24">Qty</th>
+                                <th className="py-4 text-right w-32 lg:w-40">Price</th>
+                                <th className="py-4 text-right w-36 lg:w-44 pr-4">Line Total</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 text-base font-bold text-slate-700">
+                        <tbody className="divide-y divide-slate-100 text-sm lg:text-base font-bold text-slate-700">
                             {lastInvoice.items.map((item, idx) => (
-                                <tr key={idx} className="hover:bg-slate-50/50">
-                                    <td className="py-5 pl-4 uppercase tracking-tight">{item.name}</td>
-                                    <td className="py-5 text-center text-slate-400">{item.quantity}</td>
-                                    <td className="py-5 text-right text-slate-400 font-mono">Rs. {item.price.toFixed(2)}</td>
-                                    <td className="py-5 text-right font-black text-slate-900 pr-4 font-mono text-lg">Rs. {(item.price * item.quantity).toFixed(2)}</td>
+                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="py-4 lg:py-5 pl-4 uppercase tracking-tight">{item.name}</td>
+                                    <td className="py-4 lg:py-5 text-center text-slate-400">{item.quantity}</td>
+                                    <td className="py-4 lg:py-5 text-right text-slate-400 font-mono">Rs.{item.price.toFixed(0)}</td>
+                                    <td className="py-4 lg:py-5 text-right font-black text-slate-900 pr-4 font-mono text-lg">Rs.{(item.price * item.quantity).toFixed(0)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -428,37 +434,37 @@ export const BillingView: React.FC<BillingViewProps> = ({ products, shopProfile,
                 </div>
 
                 {/* Totals Section */}
-                <div className="mt-12 flex justify-end">
-                    <div className="w-[380px] space-y-4 bg-slate-900 text-white p-10 rounded-[3rem] shadow-xl relative overflow-hidden">
+                <div className="mt-10 flex justify-end">
+                    <div className="w-full sm:w-[380px] space-y-4 bg-slate-900 text-white p-8 lg:p-10 rounded-[2.5rem] lg:rounded-[3rem] shadow-xl relative overflow-hidden">
                         <div className="absolute -left-10 -top-10 opacity-5 text-white pointer-events-none"><ShoppingCart size={150} /></div>
                         
-                        <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest text-slate-400">
-                            <span>Subtotal</span>
-                            <span className="font-mono">Rs. {lastInvoice.subtotal.toFixed(2)}</span>
+                        <div className="flex justify-between items-center text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-slate-400">
+                            <span>Subtotal Amount</span>
+                            <span className="font-mono">Rs.{lastInvoice.subtotal.toFixed(0)}</span>
                         </div>
                         {lastInvoice.discount > 0 && (
-                            <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest text-amber-500">
-                                <span>Discount</span>
-                                <span className="font-mono">- Rs. {lastInvoice.discount.toFixed(2)}</span>
+                            <div className="flex justify-between items-center text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-amber-500">
+                                <span>Discount Apply</span>
+                                <span className="font-mono">- Rs.{lastInvoice.discount.toFixed(0)}</span>
                             </div>
                         )}
-                        <div className="flex justify-between items-center pt-6 border-t border-slate-700">
-                            <span className="text-xl font-black uppercase tracking-tighter text-cyan-400">Grand Total</span>
-                            <span className="text-4xl font-black font-mono">Rs. {lastInvoice.total.toFixed(2)}</span>
+                        <div className="flex justify-between items-center pt-5 lg:pt-6 border-t border-slate-700">
+                            <span className="text-lg lg:text-xl font-black uppercase tracking-tighter text-cyan-400">Total Due</span>
+                            <span className="text-3xl lg:text-4xl font-black font-mono">Rs.{lastInvoice.total.toFixed(0)}</span>
                         </div>
                         
                         <div className="pt-4 border-t border-slate-700/50 mt-4 text-[9px] font-black uppercase tracking-widest text-slate-500">
                             <div className="flex justify-between">
-                                <span>Payment Mode:</span>
-                                <span className="text-white">{lastInvoice.paymentMethod}</span>
+                                <span>Mode of Payment:</span>
+                                <span className="text-white uppercase">{lastInvoice.paymentMethod}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-12 text-center border-t border-slate-100 pt-8">
-                    <p className="text-2xl font-black text-slate-900 uppercase tracking-[0.3em] mb-2">{shopProfile.footerNote}</p>
-                    <p className="text-[9px] text-slate-300 font-black uppercase tracking-[0.8em] italic">Authorized Digital Document • AR Printers Hub</p>
+                <div className="mt-10 text-center border-t border-slate-100 pt-8">
+                    <p className="text-xl lg:text-2xl font-black text-slate-900 uppercase tracking-[0.3em] mb-2">{shopProfile.footerNote}</p>
+                    <p className="text-[8px] lg:text-[9px] text-slate-300 font-black uppercase tracking-[0.8em] italic">Electronic Document • AR Printers Authorized</p>
                 </div>
               </div>
             </div>
