@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -19,13 +20,11 @@ const App: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   
-  // Use a default state initially, will be populated by DB
   const [shopProfile, setShopProfile] = useState<ShopProfile>({
     name: 'Loading...', address: '', phone: '', email: '', footerNote: ''
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initial Data Load
   useEffect(() => {
     if (isAuthenticated) {
       refreshData();
@@ -46,7 +45,7 @@ const App: React.FC = () => {
         setPurchases(purchData);
         setShopProfile(profileData);
     } catch (error) {
-        console.error("Failed to load data from local database:", error);
+        console.error("Failed to load local database:", error);
     } finally {
         setIsLoading(false);
     }
@@ -58,7 +57,7 @@ const App: React.FC = () => {
 
   const renderView = () => {
     if (isLoading) {
-        return <div className="flex items-center justify-center h-full text-slate-500">Loading Local Database...</div>;
+        return <div className="flex items-center justify-center h-full text-slate-500 font-black uppercase tracking-widest animate-pulse">Initializing Database...</div>;
     }
 
     switch (currentView) {
@@ -79,15 +78,15 @@ const App: React.FC = () => {
       case AppView.SETTINGS:
         return <SettingsView initialProfile={shopProfile} onSave={refreshData} />;
       default:
-        return <div>View not found</div>;
+        return <div>View Error</div>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
+    <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row">
       <Sidebar currentView={currentView} onChangeView={setCurrentView} />
       
-      <main className="flex-1 ml-64 p-8 h-screen overflow-y-auto print:ml-0 print:p-0">
+      <main className="flex-1 md:ml-64 p-4 md:p-8 h-screen overflow-y-auto print:ml-0 print:p-0">
         <div className="max-w-7xl mx-auto h-full">
           {renderView()}
         </div>
