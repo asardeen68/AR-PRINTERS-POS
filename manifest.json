@@ -1,0 +1,15 @@
+{
+  "short_name": "AR POS",
+  "name": "AR Printers POS System",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2544/2544087.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0891b2",
+  "background_color": "#ffffff"
+}
